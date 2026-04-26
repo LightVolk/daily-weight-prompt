@@ -1,8 +1,12 @@
-/*
+.daily-weight-validation-message {
+	color: var(--text-error);
+	margin-top: 12px;
+	min-height: 1.2em;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+.daily-weight-buttons {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 16px;
+}

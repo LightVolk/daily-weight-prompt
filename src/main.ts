@@ -1,99 +1,141 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { Notice, Plugin, TFile } from "obsidian";
+import { WeightPromptModal } from "./ui/weight-prompt-modal";
+import { DEFAULT_SETTINGS, WeightPluginSettings, WeightSettingTab } from "./settings";
+import { ensureTodayDailyNoteExists } from "./daily-note";
 
-// Remember to rename these classes and interfaces!
+export default class DailyWeightPlugin extends Plugin {
+	settings: WeightPluginSettings = { ...DEFAULT_SETTINGS };
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
-
-	async onload() {
+	/**
+	 * Основная точка входа плагина.
+	 * Здесь мы только:
+	 * 1. загружаем сохранённые настройки/состояние;
+	 * 2. регистрируем команду;
+	 * 3. добавляем вкладку настроек;
+	 * 4. запускаем автопроверку после полной готовности интерфейса Obsidian.
+	 */
+	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			}
+			id: "ask-current-weight",
+			name: "Ask current weight now",
+			callback: async () => {
+				await this.askForCurrentWeight(false);
+			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new WeightSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
+		this.app.workspace.onLayoutReady(() => {
+			// Не блокируем загрузку интерфейса:
+			// запускаем асинхронную логику отдельно.
+			void this.handleStartupPrompt();
 		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
 	}
 
-	onunload() {
+	/**
+	 * Автоматическое поведение при старте Obsidian.
+	 * Если пользователь уже видел окно сегодня, второй раз не спрашиваем.
+	 */
+	private async handleStartupPrompt(): Promise<void> {
+		if (this.settings.askOnlyOncePerDay && this.settings.lastPromptDate === this.getTodayDateString()) {
+			return;
+		}
+
+		await this.askForCurrentWeight(true);
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+	/**
+	 * Общий метод для автоматического запуска и ручной команды.
+	 * Параметр `respectOncePerDay` говорит, нужно ли учитывать защиту
+	 * "не спрашивать второй раз сегодня".
+	 */
+	private async askForCurrentWeight(respectOncePerDay: boolean): Promise<void> {
+		const today = this.getTodayDateString();
+
+		if (respectOncePerDay && this.settings.askOnlyOncePerDay && this.settings.lastPromptDate === today) {
+			return;
+		}
+
+		const dailyNoteFile = await this.ensureTodayNoteWithErrors();
+		if (!dailyNoteFile) {
+			return;
+		}
+
+		const modal = new WeightPromptModal(this.app, {
+			propertyName: this.settings.weightPropertyName,
+			onSave: async (weight: number) => {
+				return await this.saveWeightToNote(dailyNoteFile, weight, today);
+			},
+			onSkip: async () => {
+				return await this.saveWeightToNote(dailyNoteFile, null, today);
+			},
+		});
+
+		modal.open();
 	}
 
-	async saveSettings() {
+	/**
+	 * Создаёт или находит сегодняшнюю daily note.
+	 * Все пользовательские ошибки превращаем в Notice, чтобы пользователь понимал,
+	 * что именно пошло не так.
+	 */
+	private async ensureTodayNoteWithErrors(): Promise<TFile | null> {
+		try {
+			return await ensureTodayDailyNoteExists();
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Не удалось получить сегодняшнюю daily note.";
+			new Notice(message, 6000);
+			console.error("Daily Weight Prompt: failed to prepare today's daily note.", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Сохраняем вес в frontmatter и помечаем, что сегодня окно уже было показано.
+	 * Источник истины здесь только один: frontmatter daily note.
+	 */
+	private async saveWeightToNote(file: TFile, weight: number | null, today: string): Promise<boolean> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
+				frontmatter[this.settings.weightPropertyName] = weight;
+			});
+
+			this.settings.lastPromptDate = today;
+			await this.saveSettings();
+			return true;
+		} catch (error) {
+			new Notice("Не удалось обновить frontmatter сегодняшней заметки.", 6000);
+			console.error("Daily Weight Prompt: failed to update frontmatter.", error);
+			return false;
+		}
+	}
+
+	/**
+	 * Формируем строку даты в строго нужном формате:
+	 * YYYY-MM-DD
+	 */
+	private getTodayDateString(): string {
+		return window.moment().format("YYYY-MM-DD");
+	}
+
+	/**
+	 * Загружаем и объединяем настройки с дефолтами.
+	 * Так плагин не ломается, если в data.json ещё нет новых полей.
+	 */
+	async loadSettings(): Promise<void> {
+		const loadedData = (await this.loadData()) as Partial<WeightPluginSettings> | null;
+		this.settings = {
+			...DEFAULT_SETTINGS,
+			...loadedData,
+		};
+	}
+
+	/**
+	 * Сохраняем и настройки, и служебное состояние в один объект data.json.
+	 */
+	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
 	}
 }
