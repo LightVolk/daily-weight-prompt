@@ -1,5 +1,11 @@
 # Obsidian community plugin
 
+## Repository memory bank
+
+- Before doing substantial work, read `memory-bank/README.md`.
+- For architecture context, read `memory-bank/architecture.md`.
+- For historical decisions, read `memory-bank/decisions/`.
+
 ## Project overview
 
 - Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
