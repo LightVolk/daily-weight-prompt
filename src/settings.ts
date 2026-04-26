@@ -4,19 +4,19 @@ import DailyWeightPlugin from "./main";
 
 export interface WeightPluginSettings {
 	/**
-	 * Имя свойства во frontmatter.
-	 * По умолчанию: weight
+	 * Frontmatter property name.
+	 * Default: `weight`
 	 */
 	weightPropertyName: string;
 
 	/**
-	 * Если true, автоматический prompt не показывается повторно в тот же день.
+	 * If true, the automatic prompt is not shown again on the same day.
 	 */
 	askOnlyOncePerDay: boolean;
 
 	/**
-	 * Служебное состояние: дата последнего показа/обработки prompt.
-	 * Формат: YYYY-MM-DD
+	 * Internal state: date of the last prompt display/handling.
+	 * Format: YYYY-MM-DD
 	 */
 	lastPromptDate: string;
 }
@@ -48,8 +48,8 @@ export class WeightSettingTab extends PluginSettingTab {
 					.setPlaceholder(localization.settingsWeightPropertyPlaceholder)
 					.setValue(this.plugin.settings.weightPropertyName)
 					.onChange(async (value) => {
-						// Убираем лишние пробелы, чтобы не получить случайно свойство
-						// вроде \" weight \".
+						// Trim extra whitespace so we do not accidentally persist
+						// a property name like " weight ".
 						const normalizedValue = value.trim();
 						this.plugin.settings.weightPropertyName = normalizedValue || DEFAULT_SETTINGS.weightPropertyName;
 						await this.plugin.saveSettings();
