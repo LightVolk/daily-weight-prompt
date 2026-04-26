@@ -79,6 +79,7 @@ async function flushAsyncWork(): Promise<void> {
 describe("DailyWeightPlugin", () => {
 	beforeEach(() => {
 		obsidianTestState.notices.length = 0;
+		obsidianTestState.language = "en";
 		pluginTestState.commands.length = 0;
 		pluginTestState.settingTabs.length = 0;
 		pluginTestState.layoutReadyCallback = null;
@@ -109,8 +110,19 @@ describe("DailyWeightPlugin", () => {
 
 		expect(pluginTestState.commands).toHaveLength(1);
 		expect(pluginTestState.commands[0]?.id).toBe("ask-current-weight");
+		expect(pluginTestState.commands[0]?.name).toBe("Ask current weight now");
 		expect(pluginTestState.settingTabs).toHaveLength(1);
 		expect(pluginTestState.layoutReadyCallback).not.toBeNull();
+	});
+
+	it("registers Russian command text when Obsidian uses Russian", async () => {
+		// Command labels should follow the current app language as well.
+		obsidianTestState.language = "ru";
+		const plugin = createPlugin();
+
+		await plugin.onload();
+
+		expect(pluginTestState.commands[0]?.name).toBe("Запросить текущий вес сейчас");
 	});
 
 	it("does not show the automatic prompt twice on the same day", async () => {
@@ -234,6 +246,27 @@ describe("DailyWeightPlugin", () => {
 		const wasSaved = await pluginTestState.lastModalOptions?.onSave(87.4);
 
 		expect(wasSaved).toBe(false);
+		expect(obsidianTestState.notices).toContainEqual({
+			message: "Could not update today's daily note frontmatter.",
+			duration: 6000,
+		});
+	});
+
+	it("shows Russian error notice when Obsidian uses Russian", async () => {
+		// Error messages should follow the same locale rules as the rest of the UI.
+		obsidianTestState.language = "ru";
+		const app = createMockApp(async () => {
+			throw new Error("Cannot write frontmatter");
+		});
+		const plugin = createPlugin(app);
+		const dailyNoteFile = new TFile("Daily/2026-04-26.md");
+
+		pluginTestState.ensureTodayDailyNoteExists.mockResolvedValue(dailyNoteFile);
+
+		await plugin.onload();
+		await pluginTestState.commands[0]?.callback();
+		await pluginTestState.lastModalOptions?.onSave(87.4);
+
 		expect(obsidianTestState.notices).toContainEqual({
 			message: "Не удалось обновить frontmatter сегодняшней заметки.",
 			duration: 6000,

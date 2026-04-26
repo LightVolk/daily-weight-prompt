@@ -1,4 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { getLocalization } from "./i18n";
 import DailyWeightPlugin from "./main";
 
 export interface WeightPluginSettings {
@@ -36,14 +37,15 @@ export class WeightSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
+		const localization = getLocalization();
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Weight property name")
-			.setDesc("Frontmatter property name to update in the daily note.")
+			.setName(localization.settingsWeightPropertyName)
+			.setDesc(localization.settingsWeightPropertyDescription)
 			.addText((text) => {
 				text
-					.setPlaceholder("Weight")
+					.setPlaceholder(localization.settingsWeightPropertyPlaceholder)
 					.setValue(this.plugin.settings.weightPropertyName)
 					.onChange(async (value) => {
 						// Убираем лишние пробелы, чтобы не получить случайно свойство
@@ -55,8 +57,8 @@ export class WeightSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Ask only once per day")
-			.setDesc("Do not show the automatic weight prompt again on the same day.")
+			.setName(localization.settingsAskOnlyOncePerDay)
+			.setDesc(localization.settingsAskOnlyOncePerDayDescription)
 			.addToggle((toggle) => {
 				toggle
 					.setValue(this.plugin.settings.askOnlyOncePerDay)

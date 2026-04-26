@@ -1,7 +1,9 @@
 import { App, ButtonComponent, Modal, Setting, TextComponent } from "obsidian";
+import type { Localization } from "../i18n";
 
 interface WeightPromptModalOptions {
 	propertyName: string;
+	text: Localization;
 	onSave: (weight: number) => Promise<boolean>;
 	onSkip: () => Promise<boolean>;
 }
@@ -13,6 +15,7 @@ interface WeightPromptModalOptions {
  */
 export class WeightPromptModal extends Modal {
 	private readonly propertyName: string;
+	private readonly text: Localization;
 	private readonly onSaveCallback: (weight: number) => Promise<boolean>;
 	private readonly onSkipCallback: () => Promise<boolean>;
 
@@ -22,6 +25,7 @@ export class WeightPromptModal extends Modal {
 	constructor(app: App, options: WeightPromptModalOptions) {
 		super(app);
 		this.propertyName = options.propertyName;
+		this.text = options.text;
 		this.onSaveCallback = options.onSave;
 		this.onSkipCallback = options.onSkip;
 	}
@@ -30,17 +34,17 @@ export class WeightPromptModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		this.setTitle("Ваш текущий вес");
+		this.setTitle(this.text.modalTitle);
 
 		// Небольшая подсказка пользователю:
 		// сразу говорим, какое frontmatter-свойство будет обновлено.
 		contentEl.createEl("p", {
-			text: `Значение будет сохранено в frontmatter как "${this.propertyName}".`,
+			text: this.text.modalIntro(this.propertyName),
 		});
 
 		new Setting(contentEl)
-			.setName("Вес")
-			.setDesc("Введите число, например: 87,4 или 87.4")
+			.setName(this.text.modalWeightName)
+			.setDesc(this.text.modalWeightDescription)
 			.addText((text) => {
 				this.inputComponent = text;
 				// Явно очищаем поле при каждом открытии модалки.
@@ -63,7 +67,7 @@ export class WeightPromptModal extends Modal {
 
 		const saveButton = new ButtonComponent(buttonsWrapper);
 		saveButton
-			.setButtonText("Сохранить")
+			.setButtonText(this.text.modalSaveButton)
 			.setCta()
 			.onClick(() => {
 				void this.handleSave();
@@ -71,7 +75,7 @@ export class WeightPromptModal extends Modal {
 
 		const skipButton = new ButtonComponent(buttonsWrapper);
 		skipButton
-			.setButtonText("Пропустить")
+			.setButtonText(this.text.modalSkipButton)
 			.onClick(() => {
 				void this.handleSkip();
 			});
@@ -98,7 +102,7 @@ export class WeightPromptModal extends Modal {
 		const parsedWeight = parseWeightInput(rawValue);
 
 		if (parsedWeight === null) {
-			this.setValidationMessage("Введите корректный вес. Примеры: 87, 87,4, 87.4");
+			this.setValidationMessage(this.text.modalValidationMessage);
 			return;
 		}
 

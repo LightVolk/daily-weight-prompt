@@ -2,7 +2,12 @@ import { vi } from "vitest";
 
 export const obsidianTestState = {
 	notices: [] as Array<{ message: string; duration?: number }>,
+	language: "en",
 };
+
+export function getLanguage(): string {
+	return obsidianTestState.language;
+}
 
 export class TFile {
 	path: string;

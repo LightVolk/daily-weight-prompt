@@ -2,6 +2,7 @@ import { Notice, Plugin, TFile } from "obsidian";
 import { WeightPromptModal } from "./ui/weight-prompt-modal";
 import { DEFAULT_SETTINGS, WeightPluginSettings, WeightSettingTab } from "./settings";
 import { ensureTodayDailyNoteExists } from "./daily-note";
+import { getLocalization } from "./i18n";
 
 export default class DailyWeightPlugin extends Plugin {
 	settings: WeightPluginSettings = { ...DEFAULT_SETTINGS };
@@ -16,10 +17,11 @@ export default class DailyWeightPlugin extends Plugin {
 	 */
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		const text = getLocalization();
 
 		this.addCommand({
 			id: "ask-current-weight",
-			name: "Ask current weight now",
+			name: text.commandAskCurrentWeightNow,
 			callback: async () => {
 				await this.askForCurrentWeight(false);
 			},
@@ -65,6 +67,7 @@ export default class DailyWeightPlugin extends Plugin {
 
 		const modal = new WeightPromptModal(this.app, {
 			propertyName: this.settings.weightPropertyName,
+			text: getLocalization(),
 			onSave: async (weight: number) => {
 				return await this.saveWeightToNote(dailyNoteFile, weight, today);
 			},
@@ -85,7 +88,7 @@ export default class DailyWeightPlugin extends Plugin {
 		try {
 			return await ensureTodayDailyNoteExists();
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Не удалось получить сегодняшнюю daily note.";
+			const message = error instanceof Error ? error.message : getLocalization().noticeCouldNotGetTodayDailyNote;
 			new Notice(message, 6000);
 			console.error("Daily Weight Prompt: failed to prepare today's daily note.", error);
 			return null;
@@ -106,7 +109,7 @@ export default class DailyWeightPlugin extends Plugin {
 			await this.saveSettings();
 			return true;
 		} catch (error) {
-			new Notice("Не удалось обновить frontmatter сегодняшней заметки.", 6000);
+			new Notice(getLocalization().noticeCouldNotUpdateTodayDailyNote, 6000);
 			console.error("Daily Weight Prompt: failed to update frontmatter.", error);
 			return false;
 		}
