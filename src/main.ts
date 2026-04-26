@@ -8,12 +8,12 @@ export default class DailyWeightPlugin extends Plugin {
 	settings: WeightPluginSettings = { ...DEFAULT_SETTINGS };
 
 	/**
-	 * Основная точка входа плагина.
-	 * Здесь мы только:
-	 * 1. загружаем сохранённые настройки/состояние;
-	 * 2. регистрируем команду;
-	 * 3. добавляем вкладку настроек;
-	 * 4. запускаем автопроверку после полной готовности интерфейса Obsidian.
+	 * Main plugin entry point.
+	 * This method only:
+	 * 1. loads persisted settings/state;
+	 * 2. registers the command;
+	 * 3. adds the settings tab;
+	 * 4. starts the automatic check after the Obsidian UI is fully ready.
 	 */
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -30,15 +30,15 @@ export default class DailyWeightPlugin extends Plugin {
 		this.addSettingTab(new WeightSettingTab(this.app, this));
 
 		this.app.workspace.onLayoutReady(() => {
-			// Не блокируем загрузку интерфейса:
-			// запускаем асинхронную логику отдельно.
+			// Do not block UI startup:
+			// run the async logic separately.
 			void this.handleStartupPrompt();
 		});
 	}
 
 	/**
-	 * Автоматическое поведение при старте Obsidian.
-	 * Если пользователь уже видел окно сегодня, второй раз не спрашиваем.
+	 * Automatic behavior on Obsidian startup.
+	 * If the user has already seen the prompt today, do not show it again.
 	 */
 	private async handleStartupPrompt(): Promise<void> {
 		if (this.settings.askOnlyOncePerDay && this.settings.lastPromptDate === this.getTodayDateString()) {
@@ -49,9 +49,9 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Общий метод для автоматического запуска и ручной команды.
-	 * Параметр `respectOncePerDay` говорит, нужно ли учитывать защиту
-	 * "не спрашивать второй раз сегодня".
+	 * Shared method for both automatic startup and the manual command.
+	 * The `respectOncePerDay` flag controls whether the
+	 * "do not ask again today" guard should be enforced.
 	 */
 	private async askForCurrentWeight(respectOncePerDay: boolean): Promise<void> {
 		const today = this.getTodayDateString();
@@ -80,9 +80,9 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Создаёт или находит сегодняшнюю daily note.
-	 * Все пользовательские ошибки превращаем в Notice, чтобы пользователь понимал,
-	 * что именно пошло не так.
+	 * Creates or finds today's daily note.
+	 * All user-facing failures are converted to Notice messages so the user
+	 * can understand what went wrong.
 	 */
 	private async ensureTodayNoteWithErrors(): Promise<TFile | null> {
 		try {
@@ -96,8 +96,8 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Сохраняем вес в frontmatter и помечаем, что сегодня окно уже было показано.
-	 * Источник истины здесь только один: frontmatter daily note.
+	 * Saves the weight to frontmatter and marks today's prompt as handled.
+	 * The single source of truth for the daily value is the daily note frontmatter.
 	 */
 	private async saveWeightToNote(file: TFile, weight: number | null, today: string): Promise<boolean> {
 		try {
@@ -116,7 +116,7 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Формируем строку даты в строго нужном формате:
+	 * Returns the date string in the required format:
 	 * YYYY-MM-DD
 	 */
 	private getTodayDateString(): string {
@@ -124,8 +124,9 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Загружаем и объединяем настройки с дефолтами.
-	 * Так плагин не ломается, если в data.json ещё нет новых полей.
+	 * Loads settings and merges them with defaults.
+	 * This keeps the plugin compatible when `data.json` does not yet contain
+	 * newly added fields.
 	 */
 	async loadSettings(): Promise<void> {
 		const loadedData = (await this.loadData()) as Partial<WeightPluginSettings> | null;
@@ -136,7 +137,7 @@ export default class DailyWeightPlugin extends Plugin {
 	}
 
 	/**
-	 * Сохраняем и настройки, и служебное состояние в один объект data.json.
+	 * Saves both settings and internal state into one `data.json` object.
 	 */
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
