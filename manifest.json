@@ -5,6 +5,6 @@
 	"minAppVersion": "0.15.0",
 	"description": "Prompts for current body weight and saves it into today's daily note frontmatter.",
 	"author": "Simplevolk",
-	"authorUrl": "mailto:simplevolk@gmail.com",
+	"authorUrl": "https://github.com/LightVolk",
 	"isDesktopOnly": false
 }
