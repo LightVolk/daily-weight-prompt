@@ -9,9 +9,9 @@ interface WeightPromptModalOptions {
 }
 
 /**
- * Простая модалка для ввода текущего веса.
- * Здесь сознательно много комментариев, чтобы было легче разобраться,
- * как в Obsidian строится UI через API.
+ * Simple modal for entering the current weight.
+ * The extra comments here are intentional so it is easier to understand
+ * how Obsidian UI is composed through its API.
  */
 export class WeightPromptModal extends Modal {
 	private readonly propertyName: string;
@@ -36,8 +36,8 @@ export class WeightPromptModal extends Modal {
 
 		this.setTitle(this.text.modalTitle);
 
-		// Небольшая подсказка пользователю:
-		// сразу говорим, какое frontmatter-свойство будет обновлено.
+		// Small user hint:
+		// explain immediately which frontmatter property will be updated.
 		contentEl.createEl("p", {
 			text: this.text.modalIntro(this.propertyName),
 		});
@@ -47,12 +47,12 @@ export class WeightPromptModal extends Modal {
 			.setDesc(this.text.modalWeightDescription)
 			.addText((text) => {
 				this.inputComponent = text;
-				// Явно очищаем поле при каждом открытии модалки.
-				// Это гарантирует, что пользователь увидит пустой ввод.
+				// Explicitly clear the field every time the modal opens.
+				// This guarantees that the user sees an empty input.
 				text.setValue("");
 
-				// Обработчик Enter делает UX быстрее:
-				// пользователь может просто ввести число и нажать Enter.
+				// Handling Enter improves UX:
+				// the user can type a number and submit immediately.
 				text.inputEl.addEventListener("keydown", (event: KeyboardEvent) => {
 					if (event.key === "Enter") {
 						event.preventDefault();
@@ -80,8 +80,8 @@ export class WeightPromptModal extends Modal {
 				void this.handleSkip();
 			});
 
-		// Ставим фокус в поле после открытия окна,
-		// чтобы можно было сразу печатать.
+		// Focus the field after the modal opens
+		// so the user can start typing immediately.
 		window.setTimeout(() => {
 			this.inputComponent?.inputEl.focus();
 		}, 0);
@@ -94,8 +94,8 @@ export class WeightPromptModal extends Modal {
 	}
 
 	/**
-	 * Обработка кнопки "Сохранить".
-	 * Если значение невалидно, окно остаётся открытым.
+	 * Handles the Save button.
+	 * If the value is invalid, the modal stays open.
 	 */
 	private async handleSave(): Promise<void> {
 		const rawValue = this.inputComponent?.getValue() ?? "";
@@ -114,8 +114,8 @@ export class WeightPromptModal extends Modal {
 	}
 
 	/**
-	 * Обработка кнопки "Пропустить".
-	 * В этом случае в frontmatter будет записано null.
+	 * Handles the Skip button.
+	 * In this case, `null` is written to frontmatter.
 	 */
 	private async handleSkip(): Promise<void> {
 		this.setValidationMessage("");
@@ -135,17 +135,17 @@ export class WeightPromptModal extends Modal {
 }
 
 /**
- * Разбор пользовательского ввода веса.
+ * Parses the user's weight input.
  *
- * Допускаем:
- * - целые числа: 87
- * - дробные с запятой: 87,4
- * - дробные с точкой: 87.4
+ * Allowed:
+ * - integers: 87
+ * - decimal numbers with a comma: 87,4
+ * - decimal numbers with a dot: 87.4
  *
- * Не допускаем:
- * - пустую строку
- * - буквы
- * - единицы измерения вроде 87kg
+ * Rejected:
+ * - empty string
+ * - letters
+ * - units such as 87kg
  */
 export function parseWeightInput(rawValue: string): number | null {
 	const trimmedValue = rawValue.trim();

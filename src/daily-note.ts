@@ -7,11 +7,11 @@ import {
 } from "obsidian-daily-notes-interface";
 
 /**
- * Находит или создаёт сегодняшнюю daily note через стандартную интеграцию
+ * Finds or creates today's daily note through the standard
  * Daily Notes / Periodic Notes.
  *
- * Если интеграция недоступна, бросаем ошибку:
- * пользователь увидит Notice на уровне вызывающего кода.
+ * If the integration is unavailable, throw an error.
+ * The caller is responsible for converting it into a user-facing Notice.
  */
 export async function ensureTodayDailyNoteExists(): Promise<TFile> {
 	if (!appHasDailyNotesPluginLoaded()) {
@@ -28,8 +28,8 @@ export async function ensureTodayDailyNoteExists(): Promise<TFile> {
 			return existingDailyNote;
 		}
 	} catch (error) {
-		// Некоторые реализации могут падать, если папка из настроек ещё не создана.
-		// В таком случае пробуем создать сегодняшнюю заметку напрямую.
+		// Some implementations can fail if the configured folder does not exist yet.
+		// In that case, fall back to creating today's note directly.
 		console.warn("Daily Weight Prompt: failed to read existing daily notes, will try to create note.", error);
 	}
 
